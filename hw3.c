@@ -9,11 +9,15 @@
  *       Answer: The quad was not missing; the cylinder wall was complete. The missing part was one pie slice of the base circle.
  *     Attempted to do the hook but realized I still don't know exactly how coordinates and transforms work
  *     This is as far as I get without looking at examples
- *   Version 2 (tracked) 10/22/22 3:30 PM - ??
+ *   Version 2 (tracked) 10/22/22 3:30 PM - 4:24 PM = 0.9 hr
  *     Remembered to enable Z-Buffer, fixed the weird rendering of the cylinder when I should have seen the base but could not.
  *     Remembered to do the triangle fan at <=360 degrees (I had <360, which looked like Pac-Man instead of a circle).
  *     Figured out which axis I actually need to rotate the hook around (y-axis, not z-axis).
  *     I still need to get the candy cane hook in the correct location. Right now it is on top of the hook's axis of rotation instead of on top of the straight part of the cane. I need to maybe use homogeneous coordinates in order to rotate the (-hookRad, 0, 0) vector around the origin.
+ *   Version 3 (tracked) 10/22/22 4:24 PM - 4:42 PM = 0.3 hr
+ *     Got the candy cane hook working (but the top of the hook curve is disjoint because the cylinders are too short. I may make the hook mathematically later, with variable section lengths depending on the distance of the point from the center of the hook sweep curve). 
+ *     I still do not specify the location and rotation of a candy cane as parameters. If I do this, it should make positioning things in the scene easier.
+ *     
  */
 
 #include <stdio.h>
@@ -162,8 +166,9 @@ void RedStripedCylinderWall(int circlePrecision, float crossRad, float straightH
  * @param float hookDeg - the length of the hook's sweep path in degrees (180 would make a half-circle)
  */
 void CandyCane(float crossRad, float straightHeight, float hookRad, int hookDeg) {
+  glPushMatrix();
   float nonRed = 1.0; // 1.0 when white stripe, 0.0 when red stripe
-  int circlePrecision = 30; // degrees per rectangle making up a cylinder
+  int circlePrecision = 15; // degrees per rectangle making up a cylinder
   // First, make a circle at the base of the candy cane
   Circle(circlePrecision, crossRad, 0, 0, 0);
   // Now, make the tall straight cylinder
@@ -173,11 +178,15 @@ void CandyCane(float crossRad, float straightHeight, float hookRad, int hookDeg)
   // first, calculate how long each cylinder in the hook will be
   float curveSectionLen = hookRad * M_PI*circlePrecision/180;
   // then, align the origin with the center of the hook curve; the radius is from the center of the curve to the center of the circular cross-section.
-  glTranslatef(1*hookRad, 0, straightHeight);
-  for(int i=0; i<=hookDeg; i+=circlePrecision) {
+  // glTranslatef(hookRad, 0, straightHeight); my old plan was to put the transform at the hook center
+  glTranslatef(0, 0, straightHeight);
+  for(int i=0; i<hookDeg; i+=circlePrecision) {
+    // I want to rotate, then place the cylinder section, then translate along the tangent line
     glRotatef(circlePrecision, 0, 1.0, 0);
     RedStripedCylinderWall(circlePrecision, crossRad, curveSectionLen);
+    glTranslatef(0, 0, curveSectionLen);
   }
+  glPopMatrix();
   ErrCheck("candy cane");
 }
 
@@ -188,13 +197,13 @@ void CandyCane(float crossRad, float straightHeight, float hookRad, int hookDeg)
 
 void display() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // TO-DO: Push the model matrix
+  // TO-DO: Push the model matrix (not necessary since rotateView resets the transform to the identity matrix)
   rotateView();
   displayAxes();
-  // make it so y is up for the candy cane instead of z
-  glRotatef(-90, 1.0, 0, 0);
+  glRotatef(-90, 1.0, 0, 0); // make it so y is up for the candy cane instead of z
   CandyCane(0.8, 4.0, 1.5, 180);
-  glTranslatef(2.0, 0, -1.0);
+  glTranslatef(2.0, -2.0, -1.0);
+  glRotatef(60, 0, 0, 1.0); // rotate about the z-axis (which is the axis of the candy cane at this point since transforms happen from bottom-up)
   CandyCane(1.0, 7.0, 1.3, 160);
   // TO-DO: Pop the model matrix
   // render the scene
