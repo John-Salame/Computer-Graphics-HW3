@@ -23,6 +23,8 @@
  *      The proof is hookProof.JPG.
  *      I still do not have parameters in the candy cane for physical placement, but I am happy with what I have.
  *      I think my object is sufficiently complicated, if you look at the equation I came up with to generate the hook.
+ *    Version 5 (tracked)
+ *      Add README.md
  */
 
 #include <stdio.h>
