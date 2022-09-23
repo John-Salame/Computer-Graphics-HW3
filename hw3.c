@@ -14,10 +14,15 @@
  *     Remembered to do the triangle fan at <=360 degrees (I had <360, which looked like Pac-Man instead of a circle).
  *     Figured out which axis I actually need to rotate the hook around (y-axis, not z-axis).
  *     I still need to get the candy cane hook in the correct location. Right now it is on top of the hook's axis of rotation instead of on top of the straight part of the cane. I need to maybe use homogeneous coordinates in order to rotate the (-hookRad, 0, 0) vector around the origin.
- *   Version 3 (tracked) 10/22/22 4:24 PM - 4:42 PM = 0.3 hr
+ *   Version 3 (tracked) 10/22/22 4:24 PM - 5:00 PM = 0.6 hr
  *     Got the candy cane hook working (but the top of the hook curve is disjoint because the cylinders are too short. I may make the hook mathematically later, with variable section lengths depending on the distance of the point from the center of the hook sweep curve). 
  *     I still do not specify the location and rotation of a candy cane as parameters. If I do this, it should make positioning things in the scene easier.
- *     
+ *    Version 4 (tracked) 10/22/22 8:30 PM - 11:00 PM = 2.5 hr
+ *      I have one smoooooth candy cane!
+ *      I made a proof on a whiteboard for how long to make the secant line and in what direction, for perfectly connecting hook segments.
+ *      The proof is hookProof.JPG.
+ *      I still do not have parameters in the candy cane for physical placement, but I am happy with what I have.
+ *      I think my object is sufficiently complicated, if you look at the equation I came up with to generate the hook.
  */
 
 #include <stdio.h>
@@ -158,6 +163,38 @@ void RedStripedCylinderWall(int circlePrecision, float crossRad, float straightH
   glEnd();
 }
 
+/* 
+ * Create a pseudo-cylinder segment of the hook part of the candy cane
+ * @param int circlePrecision - how many degrees a quad takes up, and also how many degrees of the curve a hook segment spans
+ * @param float crossRad - the radius of the circular cross section
+ * @param float hookRad - the radius of the hook curve (distance from the center of the curve to the center of the circular cross section)
+ */
+void RedStripedHookSegment(int circlePrecision, float crossRad, float hookRad) {
+  float nonRed = 1.0;
+  int hookDeg = circlePrecision;
+  float secantAngle = (float) hookDeg/2; // x in the image hookProof.JPG
+  glBegin(GL_QUAD_STRIP);
+  // Draw the quads, which have variable height based on how far out they are
+  for(int i=0; i <=360; i+=hookDeg) {
+    glColor3f(1.0, nonRed, nonRed); // I need an even number of rectangles for the color to start and end on red
+    nonRed = !nonRed; // binary flip from 0 to 1 or 1 to 0
+    float x = crossRad*Cos(i);
+    float radius = hookRad-x;
+    // The x value of the vertex is x-hookRad, which is the same as -1*radius
+    glVertex3f(-radius, crossRad*Sin(i), 0);
+    // Here we explain what is shown in my proof, hookProof.JPG
+    // The "top" of the "cylinder" is found by following the secant line from the current hook segment to the start of the next hook segment.
+    // The equation to do this is 2*hookRad*sin(hookDeg/2) and the direction of the secant line is the tangent line rotated by (hookDeg/2).
+    // We rotate (0, 0, secantLength) counter-clockwise around the y-axis (positive) by (hookDeg/2).
+    // From the 3D rotation matrix, sin(hookDeg/2) is (z*sin(hookDeg/2), 0, z*cos(hookDeg/2))
+    //   = (secantLength*sin(hookDeg/2), 0, secantLength*cos(hookDeg/2)).
+    //   We call hookDeg/2 the secantAngle.
+    float secantLength = 2*radius*Sin(secantAngle);
+    glVertex3f(-radius+secantLength*Sin(secantAngle), crossRad*Sin(i), secantLength*Cos(secantAngle));
+  }
+  glEnd();
+}
+
 /*
  * Create a candy cane with the bottom at the origin of the model matrix
  * @param float crossRad - radius of the cross section
@@ -167,25 +204,18 @@ void RedStripedCylinderWall(int circlePrecision, float crossRad, float straightH
  */
 void CandyCane(float crossRad, float straightHeight, float hookRad, int hookDeg) {
   glPushMatrix();
-  float nonRed = 1.0; // 1.0 when white stripe, 0.0 when red stripe
   int circlePrecision = 15; // degrees per rectangle making up a cylinder
   // First, make a circle at the base of the candy cane
   Circle(circlePrecision, crossRad, 0, 0, 0);
   // Now, make the tall straight cylinder
   RedStripedCylinderWall(circlePrecision, crossRad, straightHeight);
   // Now, make the hook
-  // Later on, use a variable radius based on center of the circle - cos(theta). That way, the further edges of the circle sweep longer distances (by sweeping more "height" on the "cylinder").
-  // first, calculate how long each cylinder in the hook will be
-  float curveSectionLen = hookRad * M_PI*circlePrecision/180;
-  // then, align the origin with the center of the hook curve; the radius is from the center of the curve to the center of the circular cross-section.
-  // glTranslatef(hookRad, 0, straightHeight); my old plan was to put the transform at the hook center
-  glTranslatef(0, 0, straightHeight);
+  glTranslatef(hookRad, 0, straightHeight);
   for(int i=0; i<hookDeg; i+=circlePrecision) {
-    // I want to rotate, then place the cylinder section, then translate along the tangent line
-    glRotatef(circlePrecision, 0, 1.0, 0);
-    RedStripedCylinderWall(circlePrecision, crossRad, curveSectionLen);
-    glTranslatef(0, 0, curveSectionLen);
+    RedStripedHookSegment(circlePrecision, crossRad, hookRad);
+    glRotatef(circlePrecision, 0, 1.0, 0); // rotate the curve origin so the next segment starts at the end of the previous segment
   }
+  Circle(circlePrecision, crossRad, -hookRad, 0, 0);
   glPopMatrix();
   ErrCheck("candy cane");
 }
