@@ -33,8 +33,18 @@
 // math defines https://stackoverflow.com/questions/1727881/how-to-use-the-pi-constant-in-c
 #define _USE_MATH_DEFINES 
 #include <math.h>
+// begin including OpenGL stuff
+#ifdef USEGLEW
+#include <GL/glew.h>
+#endif
 #define GL_GLEXT_PROTOTYPES
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+// Tell Xcode IDE to not gripe about OpenGL deprecation
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#else
 #include <GL/glut.h>
+#endif
 //  Default resolution
 //  For Retina displays compile with -DRES=2
 #ifndef RES
