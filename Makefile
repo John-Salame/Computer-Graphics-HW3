@@ -1,12 +1,19 @@
-#  MinGW
+# HW3
+EXE=hw3
+
+# Main target
+all: $(EXE)
+
+#  Msys/MinGW
 ifeq "$(OS)" "Windows_NT"
 CFLG=-O3 -Wall -DUSEGLEW
-LIBS=-lfreeglut -lglew32 -lglu32 -lopengl32
-CLEAN=rm *.exe *.o *.a
+LIBS=-lfreeglut -lglew32 -lglu32 -lopengl32 -lm
+CLEAN=rm -f *.exe *.o *.a
 else
 #  OSX
 ifeq "$(shell uname)" "Darwin"
-CFLG=-O3 -Wall -Wno-deprecated-declarations -DRES=2
+RES=$(shell uname -r|sed -E 's/(.).*/\1/'|tr 12 21)
+CFLG=-O3 -Wall -Wno-deprecated-declarations -DRES=$(RES)
 LIBS=-framework GLUT -framework OpenGL
 #  Linux/Unix/Solaris
 else
@@ -14,12 +21,18 @@ CFLG=-O3 -Wall
 LIBS=-lglut -lGLU -lGL -lm
 endif
 #  OSX/Linux/Unix/Solaris
-CLEAN=rm -f hw3 *.o *.a
+CLEAN=rm -f $(EXE) *.o *.a
 endif
 
-#  Compile and link
-hw3:hw3.c
-	gcc $(CFLG) -o $@ $^   $(LIBS)
+# Compile rules
+.c.o:
+	gcc -c $(CFLG)  $<
+.cpp.o:
+	g++ -c $(CFLG)  $<
+
+#  Link
+hw3:hw3.o  
+	gcc $(CFLG) -o $@ $^  $(LIBS)
 
 #  Clean
 clean:
